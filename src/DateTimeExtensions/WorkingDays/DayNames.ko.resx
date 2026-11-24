@@ -139,7 +139,10 @@
     <value>현충일</value>
   </data>
   <data name="InternationalWorkerDay" xml:space="preserve">
-    <value>근로자의 날</value>
+    <value>노동절</value>
+  </data>
+  <data name="Jeheonjeol" xml:space="preserve">
+    <value>제헌절</value>
   </data>
   <data name="NewYear" xml:space="preserve">
     <value>신정</value>

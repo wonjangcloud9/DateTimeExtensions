@@ -39,6 +39,7 @@ namespace DateTimeExtensions.WorkingDays.CultureStrategies
             this.InnerObservances.AddHoliday(GlobalHolidays.InternationalWorkersDay);
             this.InnerObservances.AddHoliday(SeokgaTansinil);
             this.InnerObservances.AddHoliday(Hyeonchungil);
+            this.InnerObservances.AddHoliday(Jeheonjeol);
             this.InnerObservances.AddHoliday(Gwangbokjeol);
             this.InnerObservances.AddHoliday(Gaecheonjeol);
             this.InnerObservances.AddHoliday(Hangulnal);
@@ -67,7 +68,12 @@ namespace DateTimeExtensions.WorkingDays.CultureStrategies
                         AddSubstituteHoliday(holidayMap, holidays, innerHoliday.CalendarDay);
                         foreach (DateTime holiday in holidays)
                         {
-                            holidayMap.Add(holiday, new Observance(new NamedDay(innerHoliday.CalendarDay.Name, new FixedDayResolver(holiday.Month, holiday.Day)), true));
+                            // A day that is already another holiday (e.g. Gaecheonjeol during Chuseok 2028) keeps it;
+                            // the overlap was compensated with a substitute holiday above.
+                            if (!holidayMap.ContainsKey(holiday))
+                            {
+                                holidayMap.Add(holiday, new Observance(new NamedDay(innerHoliday.CalendarDay.Name, new FixedDayResolver(holiday.Month, holiday.Day)), true));
+                            }
                         }
                     }
                     else if (innerHoliday.CalendarDay == Eorininal)
@@ -84,13 +90,63 @@ namespace DateTimeExtensions.WorkingDays.CultureStrategies
                         }
                         holidayMap.Add(childrensDay, new Observance(new NamedDay(innerHoliday.CalendarDay.Name, new FixedDayResolver(childrensDay.Month, childrensDay.Day)), true));
                     }
-                    else
+                    else if (!holidayMap.ContainsKey(date.Value))
                     {
                         holidayMap.Add(date.Value, innerHoliday);
                     }
                 }
             }
+            AddWeekendSubstituteHolidays(holidayMap, year);
             return holidayMap;
+        }
+
+        // Holidays that get a substitute holiday when they fall on a Saturday or Sunday or on another holiday,
+        // and the first year the rule applies to them:
+        // Samiljeol, Gwangbokjeol, Gaecheonjeol and Hangulnal since Aug. 2021,
+        // SeokgaTansinil and Christmas since May 2023, Labour Day and Jeheonjeol since 2026.
+        private static readonly (NamedDay Holiday, int SinceYear)[] WeekendSubstituteHolidays =
+        {
+            (Samiljeol, 2021),
+            (GlobalHolidays.InternationalWorkersDay, 2026),
+            (SeokgaTansinil, 2023),
+            (Jeheonjeol, 2026),
+            (Gwangbokjeol, 2021),
+            (Gaecheonjeol, 2021),
+            (Hangulnal, 2021),
+            (ChristianHolidays.Christmas, 2023),
+        };
+
+        // The substitute holiday is the first day after the holiday that is neither a weekend day nor a holiday.
+        private static void AddWeekendSubstituteHolidays(IDictionary<DateTime, Observance> holidayMap, int year)
+        {
+            foreach (var (holiday, sinceYear) in WeekendSubstituteHolidays)
+            {
+                if (year < sinceYear)
+                {
+                    continue;
+                }
+                var date = holiday.GetInstance(year);
+                if (!date.HasValue)
+                {
+                    continue;
+                }
+                Observance overlappedHoliday;
+                if (IsWeekend(date.Value) ||
+                    holidayMap.TryGetValue(date.Value, out overlappedHoliday) && overlappedHoliday.CalendarDay != holiday)
+                {
+                    DateTime substituteDay = date.Value.AddDays(1);
+                    while (IsWeekend(substituteDay) || holidayMap.ContainsKey(substituteDay))
+                    {
+                        substituteDay = substituteDay.AddDays(1);
+                    }
+                    holidayMap.Add(substituteDay, new Observance(new NamedDay(holiday.Name, new FixedDayResolver(substituteDay.Month, substituteDay.Day)), true));
+                }
+            }
+        }
+
+        private static bool IsWeekend(DateTime date)
+        {
+            return date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
         }
 
         // Special substitute holiday rule for Seol(lunisolar new year) and Chuseok(15th of 8th lunisolar month)
@@ -104,8 +160,7 @@ namespace DateTimeExtensions.WorkingDays.CultureStrategies
                     holidayMap.TryGetValue(date, out overlappedHoliday) && overlappedHoliday.CalendarDay != holiday)
                 {
                     DateTime substituteDay = dates.Last().AddDays(1);
-                    while (substituteDay.DayOfWeek == DayOfWeek.Sunday ||
-                            holidayMap.TryGetValue(date, out overlappedHoliday) && overlappedHoliday.CalendarDay != holiday)
+                    while (substituteDay.DayOfWeek == DayOfWeek.Sunday || holidayMap.ContainsKey(substituteDay))
                     {
                         substituteDay = substituteDay.AddDays(1);
                     }
@@ -181,6 +236,21 @@ namespace DateTimeExtensions.WorkingDays.CultureStrategies
                     hyeonchungil = new NamedDay("Hyeonchungil", new FixedDayResolver(6, 6));
                 }
                 return hyeonchungil;
+            }
+        }
+
+        private static NamedDay jeheonjeol;
+
+        // Constitution Day (July 17): a public holiday until 2007, and again since 2026.
+        public static NamedDay Jeheonjeol
+        {
+            get
+            {
+                if (jeheonjeol == null)
+                {
+                    jeheonjeol = new NamedDay("Jeheonjeol", new YearDependantDayResolver(year => year <= 2007 || year >= 2026, new FixedDayResolver(7, 17)));
+                }
+                return jeheonjeol;
             }
         }
 

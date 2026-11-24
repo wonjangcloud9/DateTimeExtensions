@@ -33,6 +33,7 @@ namespace DateTimeExtensions.Tests
             Assert.AreEqual(KO_KRHolidayStrategy.Eorininal.Name, "어린이날");
             Assert.AreEqual(KO_KRHolidayStrategy.SeokgaTansinil.Name, "석가탄신일");
             Assert.AreEqual(KO_KRHolidayStrategy.Hyeonchungil.Name, "현충일");
+            Assert.AreEqual(KO_KRHolidayStrategy.Jeheonjeol.Name, "제헌절");
             Assert.AreEqual(KO_KRHolidayStrategy.Gwangbokjeol.Name, "광복절");
             Assert.AreEqual(KO_KRHolidayStrategy.Chuseok.Name, "추석");
             Assert.AreEqual(KO_KRHolidayStrategy.Gaecheonjeol.Name, "개천절");
@@ -40,7 +41,7 @@ namespace DateTimeExtensions.Tests
 
             Assert.AreEqual(ChristianHolidays.Christmas.Name, "성탄절");
             Assert.AreEqual(GlobalHolidays.NewYear.Name, "신정");
-            Assert.AreEqual(GlobalHolidays.InternationalWorkersDay.Name, "근로자의 날");
+            Assert.AreEqual(GlobalHolidays.InternationalWorkersDay.Name, "노동절");
         }
     }
 }

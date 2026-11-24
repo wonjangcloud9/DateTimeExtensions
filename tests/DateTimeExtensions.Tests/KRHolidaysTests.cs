@@ -77,6 +77,59 @@ namespace DateTimeExtensions.Tests
             TestHoliday(holiday, dateOnGregorian);
         }
 
+        [Test]
+        public void can_identify_Jeheonjeol()
+        {
+            var holiday = KO_KRHolidayStrategy.Jeheonjeol;
+            TestHoliday(holiday, new DateTime(2026, 7, 17));
+            TestHoliday(holiday, new DateTime(2007, 7, 17));
+            Assert.IsFalse(holiday.GetInstance(2025).HasValue);
+
+            var dateTimeCulture = new WorkingDayCultureInfo("ko-KR");
+            Assert.IsTrue(dateTimeCulture.IsWorkingDay(new DateTime(2025, 7, 17)));
+            Assert.IsFalse(dateTimeCulture.IsWorkingDay(new DateTime(2026, 7, 17)));
+        }
+
+        [TestCase(2021, 8, 16)] // Gwangbokjeol on Sunday
+        [TestCase(2021, 10, 4)] // Gaecheonjeol on Sunday
+        [TestCase(2021, 10, 11)] // Hangulnal on Saturday
+        [TestCase(2023, 5, 29)] // SeokgaTansinil on Saturday
+        [TestCase(2025, 3, 3)] // Samiljeol on Saturday
+        [TestCase(2026, 3, 2)] // Samiljeol on Sunday
+        [TestCase(2026, 5, 25)] // SeokgaTansinil on Sunday
+        [TestCase(2026, 8, 17)] // Gwangbokjeol on Saturday
+        [TestCase(2026, 10, 5)] // Gaecheonjeol on Saturday
+        [TestCase(2027, 5, 3)] // Labour Day on Saturday
+        [TestCase(2027, 7, 19)] // Jeheonjeol on Saturday
+        [TestCase(2027, 12, 27)] // Christmas on Saturday
+        public void substitute_holiday_for_a_holiday_on_a_weekend(int year, int month, int day)
+        {
+            var dateTimeCulture = new WorkingDayCultureInfo("ko-KR");
+            Assert.IsFalse(dateTimeCulture.IsWorkingDay(new DateTime(year, month, day)));
+        }
+
+        [Test]
+        public void no_weekend_substitute_holiday_before_the_rule_applies()
+        {
+            var dateTimeCulture = new WorkingDayCultureInfo("ko-KR");
+            Assert.IsTrue(dateTimeCulture.IsWorkingDay(new DateTime(2020, 10, 5))); // Gaecheonjeol 2020 on Saturday
+            Assert.IsTrue(dateTimeCulture.IsWorkingDay(new DateTime(2022, 12, 26))); // Christmas 2022 on Sunday
+        }
+
+        [Test]
+        public void chuseok_overlapping_gaecheonjeol_gets_one_substitute_holiday()
+        {
+            var dateTimeCulture = new WorkingDayCultureInfo("ko-KR");
+            // Chuseok 2028 is Oct. 2-4 and Oct. 3 is also Gaecheonjeol
+            var day = new DateTime(2028, 10, 2);
+            do
+            {
+                Assert.IsFalse(dateTimeCulture.IsWorkingDay(day), day.ToString() + " shouldn't be a working day");
+                day = day.AddDays(1);
+            } while (day <= new DateTime(2028, 10, 5));
+            Assert.IsTrue(dateTimeCulture.IsWorkingDay(new DateTime(2028, 10, 6)));
+        }
+
         private void TestHoliday(NamedDay holiday, DateTime dateOnGregorian)
         {
             var holidayInstance = holiday.GetInstance(dateOnGregorian.Year);
